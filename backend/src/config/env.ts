@@ -6,6 +6,7 @@ const envSchema = z.object({
     .enum(['development', 'test', 'production'])
     .default('development'),
   PORT: z.coerce.number().int().positive().default(3000),
+  CORS_ORIGIN: z.string().url().default('http://localhost:5173'),
 });
 
 const parsed = envSchema.safeParse(process.env);
