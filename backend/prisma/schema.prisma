@@ -6,3 +6,85 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+enum Role {
+  CLIENTE
+  ATENDENTE
+}
+
+enum Status {
+  ABERTO
+  EM_ANDAMENTO
+  RESOLVIDO
+  FECHADO
+}
+
+enum Priority {
+  BAIXA
+  MEDIA
+  ALTA
+}
+
+model User {
+  id           String @id @default(uuid())
+  name         String
+  email        String @unique
+  passwordHash String
+  role         Role   @default(CLIENTE)
+
+  consentAt     DateTime?
+  policyVersion String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  authoredTickets Ticket[]  @relation("TicketAuthor")
+  assignedTickets Ticket[]  @relation("TicketAssignee")
+  comments        Comment[]
+
+  @@map("users")
+}
+
+model Ticket {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  status      Status   @default(ABERTO)
+  priority    Priority @default(MEDIA)
+
+  authorId String
+  author   User   @relation("TicketAuthor", fields: [authorId], references: [id])
+
+  assigneeId String?
+  assignee   User?   @relation("TicketAssignee", fields: [assigneeId], references: [id])
+
+  comments Comment[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([authorId])
+  @@index([assigneeId])
+  @@index([status])
+  @@map("tickets")
+}
+
+model Comment {
+  id      String @id @default(uuid())
+  content String
+
+  ticketId String
+  ticket   Ticket @relation(fields: [ticketId], references: [id])
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id])
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([ticketId])
+  @@map("comments")
+}
