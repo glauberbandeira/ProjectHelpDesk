@@ -3,6 +3,7 @@ import helmet from 'helmet';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { env } from './config/env.js';
+import { authRoutes } from './routes/auth.routes.js';
 
 export function createApp() {
   const app = express();
@@ -25,6 +26,8 @@ export function createApp() {
   app.use(limiter);
 
   app.use(express.json());
+
+  app.use('/auth', authRoutes);   // ← adicione esta linha
 
   app.get('/health', (_req, res) => {
     res.status(200).json({
