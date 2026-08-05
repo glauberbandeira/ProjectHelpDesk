@@ -8,6 +8,7 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3000),
   CORS_ORIGIN: z.string().url().default('http://localhost:5173'),
   DATABASE_URL: z.string().min(1, 'DATABASE_URL é obrigatória'),
+  JWT_SECRET: z.string().min(16, 'JWT_SECRET deve ter ao menos 16 caracteres'),
 });
 
 const parsed = envSchema.safeParse(process.env);
