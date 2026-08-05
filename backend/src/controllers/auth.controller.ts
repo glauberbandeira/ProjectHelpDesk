@@ -38,3 +38,9 @@ export async function login(req: Request, res: Response) {
 export async function me(req: Request, res: Response) {
   return res.status(200).json({ user: req.user });
 }
+
+// Controller de demonstração de área restrita a atendentes.
+export async function staffArea(req: Request, res: Response) {
+  // Se a execução chegou aqui, os middlewares já garantiram que é ATENDENTE.
+  return res.status(200).json({ message: 'Bem-vindo à área de atendentes' });
+}
