@@ -5,10 +5,13 @@ import { Router } from 'express';
 import { authenticate } from '../middlewares/auth.middleware.js';
 
 // Controller de criação.
-import { create } from '../controllers/ticket.controller.js';
+import { create, list } from '../controllers/ticket.controller.js';
 
 // Instancia o grupo de rotas.
 export const ticketRoutes = Router();
 
 // POST /tickets → precisa estar autenticado. Fila: authenticate → create.
 ticketRoutes.post('/', authenticate, create);
+
+// GET /tickets → autenticado. O serviço filtra pelo papel de quem pediu.
+ticketRoutes.get('/', authenticate, list);
