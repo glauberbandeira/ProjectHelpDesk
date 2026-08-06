@@ -5,7 +5,7 @@ import type { Request, Response } from 'express';
 import { createTicketSchema } from '../schemas/ticket.schema.js';
 
 // Regra de negócio de criação.
-import { createTicket, listTickets } from '../services/ticket.service.js';
+import { createTicket, listTickets, getTicketById } from '../services/ticket.service.js';
 
 // Tratador central de erros (Zod → 400, AppError → status, resto → 500).
 import { handleError } from '../errors/handle-error.js';
@@ -36,6 +36,30 @@ export async function list(req: Request, res: Response) {
     // 200 com a lista (pode vir vazia — isso é válido).
     return res.status(200).json(tickets);
   } catch (error) {
+    return handleError(error, res);
+  }
+}
+
+// Controller da rota GET /tickets/:id → detalhe de um chamado.
+export async function getById(req: Request, res: Response) {
+  try {
+    // Extrai o id da URL. Com noUncheckedIndexedAccess, o TS o vê como
+    // possivelmente undefined — por isso validamos antes de usar.
+    const { id } = req.params;
+
+    // Se por algum motivo não veio um id em texto, barra com 400.
+    // (typeof !== 'string' cobre tanto undefined quanto casos inesperados.)
+    if (typeof id !== 'string') {
+      return res.status(400).json({ message: 'ID inválido' });
+    }
+
+    // Agora o TS sabe que 'id' é string — passa sem erro.
+    const ticket = await getTicketById(id, req.user!);
+
+    // 200 com o chamado + seus comentários.
+    return res.status(200).json(ticket);
+  } catch (error) {
+    // Se não achou → 404; se não pode ver → 403; ambos tratados aqui.
     return handleError(error, res);
   }
 }

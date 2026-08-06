@@ -4,6 +4,10 @@ import { prisma } from '../lib/prisma.js';
 // Tipo da entrada validada, para tipar o parâmetro 'data'.
 import type { CreateTicketInput } from '../schemas/ticket.schema.js';
 
+// Importa nosso erro de aplicação (carrega a mensagem + o status HTTP).
+import { AppError } from '../errors/app-error.js';
+
+
 // Cria um chamado no banco. Recebe o id do autor SEPARADO do corpo,
 // porque ele vem do token (quem está logado), não do que o cliente enviou.
 export async function createTicket(authorId: string, data: CreateTicketInput) {
@@ -57,4 +61,44 @@ export async function listTickets(user: { id: string; role: 'CLIENTE' | 'ATENDEN
   });
 
   return tickets;
+}
+
+// Busca um chamado por id e SÓ devolve se o usuário tiver permissão de vê-lo.
+export async function getTicketById(
+  ticketId: string,
+  user: { id: string; role: 'CLIENTE' | 'ATENDENTE' },
+) {
+  // Procura o chamado que não esteja excluído, já trazendo os comentários juntos.
+  const ticket = await prisma.ticket.findFirst({
+    where: { id: ticketId, deletedAt: null },
+    include: {
+      // Traz os comentários do chamado (relação Ticket 1-N Comment),
+      // os não-excluídos, do mais antigo para o mais novo (ordem de conversa).
+      comments: {
+        where: { deletedAt: null },
+        orderBy: { createdAt: 'asc' },
+        // De cada comentário, mostra o autor (só nome e papel — sem dado sensível).
+        include: {
+          author: { select: { id: true, name: true, role: true } },
+        },
+      },
+    },
+  });
+
+  // Não achou (ou está excluído) → 404.
+  if (!ticket) {
+    throw new AppError('Chamado não encontrado', 404);
+  }
+
+  // A VERIFICAÇÃO DE ACESSO: é atendente OU é o dono do chamado?
+  const isAtendente = user.role === 'ATENDENTE';
+  const isDono = ticket.authorId === user.id;
+
+  // Se não é nenhum dos dois, nega o acesso com 403 (proibido).
+  if (!isAtendente && !isDono) {
+    throw new AppError('Acesso negado', 403);
+  }
+
+  // Passou na verificação → devolve o chamado completo (com comentários).
+  return ticket;
 }
