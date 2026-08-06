@@ -7,6 +7,9 @@ import type { CreateTicketInput } from '../schemas/ticket.schema.js';
 // Importa nosso erro de aplicação (carrega a mensagem + o status HTTP).
 import { AppError } from '../errors/app-error.js';
 
+// Importa o tipo Status gerado pelo Prisma (os valores do enum do banco).
+// ⬇️ ADICIONE este import no TOPO do arquivo, junto dos outros:
+import type { Status } from '../generated/prisma/client.js';
 
 // Cria um chamado no banco. Recebe o id do autor SEPARADO do corpo,
 // porque ele vem do token (quem está logado), não do que o cliente enviou.
@@ -101,4 +104,49 @@ export async function getTicketById(
 
   // Passou na verificação → devolve o chamado completo (com comentários).
   return ticket;
+}
+
+// O MAPA DA MÁQUINA DE ESTADOS: para cada status, quais são os próximos permitidos.
+// Ex.: de ABERTO só dá para ir a EM_ANDAMENTO. FECHADO é final (lista vazia).
+const TRANSICOES_VALIDAS: Record<Status, Status[]> = {
+  ABERTO: ['EM_ANDAMENTO'],
+  EM_ANDAMENTO: ['RESOLVIDO', 'FECHADO'],
+  RESOLVIDO: ['FECHADO', 'EM_ANDAMENTO'], // permite reabrir
+  FECHADO: [],                            // estado final: não sai dele
+};
+
+// Atualiza o status de um chamado, validando se a transição é permitida.
+export async function updateTicketStatus(ticketId: string, novoStatus: Status) {
+  // Busca o chamado (não-excluído) para saber o status atual.
+  const ticket = await prisma.ticket.findFirst({
+    where: { id: ticketId, deletedAt: null },
+  });
+
+  // Não achou → 404.
+  if (!ticket) {
+    throw new AppError('Chamado não encontrado', 404);
+  }
+
+  // Se o novo status é igual ao atual, não há o que mudar → 400.
+  if (ticket.status === novoStatus) {
+    throw new AppError('O chamado já está neste status', 400);
+  }
+
+  // Consulta o mapa: a transição do status atual para o novo é válida?
+  const permitidos = TRANSICOES_VALIDAS[ticket.status];
+  if (!permitidos.includes(novoStatus)) {
+    // Transição impossível (ex.: ABERTO → FECHADO) → 400 com mensagem clara.
+    throw new AppError(
+      `Transição inválida: de ${ticket.status} para ${novoStatus}`,
+      400,
+    );
+  }
+
+  // Transição válida → grava o novo status. O updatedAt se atualiza sozinho.
+  const atualizado = await prisma.ticket.update({
+    where: { id: ticketId },
+    data: { status: novoStatus },
+  });
+
+  return atualizado;
 }

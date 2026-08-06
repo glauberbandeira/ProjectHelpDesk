@@ -15,3 +15,11 @@ export const createTicketSchema = z.object({
 
 // Tipo TypeScript derivado do schema — uma fonte de verdade só.
 export type CreateTicketInput = z.infer<typeof createTicketSchema>;
+
+// Formato do corpo ao atualizar o status: só aceita um destes 4 valores.
+export const updateStatusSchema = z.object({
+  status: z.enum(['ABERTO', 'EM_ANDAMENTO', 'RESOLVIDO', 'FECHADO']),
+});
+
+// Tipo derivado do schema.
+export type UpdateStatusInput = z.infer<typeof updateStatusSchema>;

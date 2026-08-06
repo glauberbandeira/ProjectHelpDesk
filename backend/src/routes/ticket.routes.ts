@@ -5,7 +5,10 @@ import { Router } from 'express';
 import { authenticate } from '../middlewares/auth.middleware.js';
 
 // Controller de criação.
-import { create, list, getById  } from '../controllers/ticket.controller.js';
+import { create, list, getById, updateStatus  } from '../controllers/ticket.controller.js';
+
+// Porteiro: exige estar logado para abrir chamado.
+import { authorize } from '../middlewares/authorize.middleware.js';
 
 // Instancia o grupo de rotas.
 export const ticketRoutes = Router();
@@ -18,3 +21,7 @@ ticketRoutes.get('/', authenticate, list);
 
 // GET /tickets/:id → autenticado. O serviço verifica permissão de acesso.
 ticketRoutes.get('/:id', authenticate, getById);
+
+// PATCH /tickets/:id/status → 3 porteiros em fila:
+// autenticado → é ATENDENTE → controller. Cliente não muda status.
+ticketRoutes.patch('/:id/status', authenticate, authorize('ATENDENTE'), updateStatus);

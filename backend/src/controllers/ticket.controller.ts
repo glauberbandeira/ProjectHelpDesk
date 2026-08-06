@@ -2,10 +2,10 @@
 import type { Request, Response } from 'express';
 
 // Schema de validação do corpo.
-import { createTicketSchema } from '../schemas/ticket.schema.js';
+import { createTicketSchema, updateStatusSchema  } from '../schemas/ticket.schema.js';
 
 // Regra de negócio de criação.
-import { createTicket, listTickets, getTicketById } from '../services/ticket.service.js';
+import { createTicket, listTickets, getTicketById, updateTicketStatus } from '../services/ticket.service.js';
 
 // Tratador central de erros (Zod → 400, AppError → status, resto → 500).
 import { handleError } from '../errors/handle-error.js';
@@ -60,6 +60,28 @@ export async function getById(req: Request, res: Response) {
     return res.status(200).json(ticket);
   } catch (error) {
     // Se não achou → 404; se não pode ver → 403; ambos tratados aqui.
+    return handleError(error, res);
+  }
+}
+
+// Controller da rota PATCH /tickets/:id/status → muda o status (só atendente).
+export async function updateStatus(req: Request, res: Response) {
+  try {
+    // Extrai e valida o id da URL (mesma guarda do passo 4.3).
+    const { id } = req.params;
+    if (typeof id !== 'string') {
+      return res.status(400).json({ message: 'ID inválido' });
+    }
+
+    // Valida o corpo: precisa vir um 'status' válido.
+    const { status } = updateStatusSchema.parse(req.body);
+
+    // Chama o serviço, que valida a transição na máquina de estados.
+    const ticket = await updateTicketStatus(id, status);
+
+    // 200 com o chamado já atualizado.
+    return res.status(200).json(ticket);
+  } catch (error) {
     return handleError(error, res);
   }
 }
