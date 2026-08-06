@@ -5,7 +5,7 @@ import rateLimit from 'express-rate-limit';
 import { env } from './config/env.js';
 import cookieParser from 'cookie-parser';
 import { authRoutes } from './routes/auth.routes.js';
-
+import { ticketRoutes } from './routes/ticket.routes.js';
 
 export function createApp() {
   const app = express();
@@ -31,7 +31,7 @@ export function createApp() {
   app.use(cookieParser()); 
   
   app.use('/auth', authRoutes);   // ← adicione esta linha
-
+  app.use('/tickets', ticketRoutes);
   app.get('/health', (_req, res) => {
     res.status(200).json({
       status: 'ok',
